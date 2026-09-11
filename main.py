@@ -1,4 +1,5 @@
 import requests
+import yfinance as yf
 
 hype_url = "https://api.hyperliquid.xyz/info"
 
@@ -14,7 +15,26 @@ def price_info(ticker):
         return None
 
 price = price_info("BTC")
-print(price)
+
+#SPY,AAPL,SNDK
+priceList = []
+datesList = []
+
+spy = yf.Ticker("SPY")
+
+#Grab Dates and Open Prices
+data = spy.history(period="1mo")
+
+dates = data.index.strftime('%m-%d').tolist()
+open_price = data['Open'].tolist()
+for i in open_price:
+    priceList.append(f"{i:.2f}")
+
+
+
+    
+
+
 
 
 
