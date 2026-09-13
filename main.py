@@ -1,11 +1,20 @@
 import requests
 import yfinance as yf
+import datetime
 
 hype_url = "https://api.hyperliquid.xyz/info"
 
-def price_info(ticker):
+startTime = datetime.datetime(2026, 8, 11, 0, 0, 0, tzinfo=datetime.timezone.utc)
+endTime = datetime.datetime(2026, 9, 11, 23, 59, 59, tzinfo=datetime.timezone.utc)
 
-    response = requests.post(hype_url, json={"type" : "allMids"})
+
+def price_info(ticker):
+    payload = {
+        "type" : "candleSnapshot",
+    
+    }
+
+    response = requests.post(hype_url, json=payload)
 
     if response.status_code == 200:
         hype_data = response.json()
@@ -15,6 +24,7 @@ def price_info(ticker):
         return None
 
 price = price_info("BTC")
+print (price)
 
 #SPY,AAPL,SNDK
 priceList = []
