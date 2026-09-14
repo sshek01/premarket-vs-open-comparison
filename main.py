@@ -1,30 +1,51 @@
 import requests
 import yfinance as yf
-import datetime
+from datetime import datetime, timezone
 
 hype_url = "https://api.hyperliquid.xyz/info"
 
-startTime = datetime.datetime(2026, 8, 11, 0, 0, 0, tzinfo=datetime.timezone.utc)
-endTime = datetime.datetime(2026, 9, 11, 23, 59, 59, tzinfo=datetime.timezone.utc)
+startTime = datetime(2026, 8, 11, 0, 0, 0, tzinfo=timezone.utc)
+endTime = datetime(2026, 9, 11, 23, 59, 59, tzinfo=timezone.utc)
+
+exactStart = int(startTime.timestamp() * 1000)
+exactEnd = int(endTime.timestamp() * 1000)
 
 
-def price_info(ticker):
+def price_info(ticker, exactStart, exactEnd):
     payload = {
         "type" : "candleSnapshot",
+        "req": {
+            "coin": ticker,
+            "interval": "15m",
+            "startTime": exactStart,
+            "endTime": exactEnd,
+        },
     
     }
 
     response = requests.post(hype_url, json=payload)
 
-    if response.status_code == 200:
-        hype_data = response.json()
-        dict_parse = hype_data.get(ticker)
-        return dict_parse
-    else:
-        return None
+    if response.status_code != 200:
+        return []
 
-price = price_info("BTC")
-print (price)
+    candles = response.json()
+    hypeData = []
+
+    for candle in candles:
+        candleTime = datetime.fromtimestamp(
+            candle["t"] / 1000, tz = timezone.utc
+        )
+
+        if candleTime.hour == 13 and candleTime.minute == 15 and candleTime.weekday() < 5:
+            highPx = float(candle["h"])
+            lowPx = float(candle["l"])
+            mid = (highPx + lowPx) / 2
+            hypeData.append(round(mid, 2))
+
+    return hypeData
+
+aaplMids = price_info("xyzAAPL", exactStart, exactEnd)
+print(aaplMids)
 
 #SPY,AAPL,SNDK
 priceList = []
