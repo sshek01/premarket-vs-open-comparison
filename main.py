@@ -4,13 +4,14 @@ from datetime import datetime, timezone
 
 hype_url = "https://api.hyperliquid.xyz/info"
 
+#Set absolute times
 startTime = datetime(2026, 8, 11, 0, 0, 0, tzinfo=timezone.utc)
 endTime = datetime(2026, 9, 11, 23, 59, 59, tzinfo=timezone.utc)
 
 exactStart = int(startTime.timestamp() * 1000)
 exactEnd = int(endTime.timestamp() * 1000)
 
-
+#JSON payload, candlesticks 15 min interval
 def price_info(ticker, exactStart, exactEnd):
     payload = {
         "type" : "candleSnapshot",
@@ -30,7 +31,8 @@ def price_info(ticker, exactStart, exactEnd):
 
     candles = response.json()
     hypeData = []
-
+    
+    #Grab specific candles before market open, compute mid price
     for candle in candles:
         candleTime = datetime.fromtimestamp(
             candle["t"] / 1000, tz = timezone.utc
@@ -41,29 +43,32 @@ def price_info(ticker, exactStart, exactEnd):
             lowPx = float(candle["l"])
             mid = (highPx + lowPx) / 2
             hypeData.append(round(mid, 2))
-
+            
     return hypeData
 
-aaplMids = price_info("xyzAAPL", exactStart, exactEnd)
-print(aaplMids)
+aaplMids= price_info("xyz:AAPL", exactStart, exactEnd)
 
-#SPY,AAPL,SNDK
+
+#START YFINANCE 
 priceList = []
 datesList = []
 
-spy = yf.Ticker("SPY")
+aapl = yf.Ticker("AAPL")
 
 #Grab Dates and Open Prices
-data = spy.history(period="1mo")
-
+data = aapl.history(start = "2026-8-10", end = "2026-9-12")
 dates = data.index.strftime('%m-%d').tolist()
-open_price = data['Open'].tolist()
-for i in open_price:
-    priceList.append(f"{i:.2f}")
+openPrice = data['Open'].tolist()
 
+for i in openPrice:
+    priceList.append(float(f"{i:.2f}"))
 
+#Calculate price discrepency
+priceGap = []
 
-    
+for i in range(24):
+    gap = ((priceList[i] - aaplMids[i]) / aaplMids[i]) * 100
+    priceGap.append(f"{gap:.2f}")
 
 
 
