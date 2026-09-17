@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAPL — Premarket vs Open</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg: #E7E4DC;
+    --panel: #F2F0E9;
+    --ink: #26241F;
+    --ink-soft: #6B675E;
+    --line: #D3CFC3;
+    --warm: #C97A2B;
+    --warm-soft: rgba(201,122,43,0.12);
+    --cool: #3D6E8C;
+    --cool-soft: rgba(61,110,140,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #201F1C;
+      --panel: #2A2925;
+      --ink: #EDEAE2;
+      --ink-soft: #A6A297;
+      --line: #3C3A34;
+      --warm: #E0954D;
+      --warm-soft: rgba(224,149,77,0.16);
+      --cool: #6FA3C4;
+      --cool-soft: rgba(111,163,196,0.16);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #201F1C;
+    --panel: #2A2925;
+    --ink: #EDEAE2;
+    --ink-soft: #A6A297;
+    --line: #3C3A34;
+    --warm: #E0954D;
+    --warm-soft: rgba(224,149,77,0.16);
+    --cool: #6FA3C4;
+    --cool-soft: rgba(111,163,196,0.16);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 48px 24px 64px;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(28px, 4vw, 40px);
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    line-height: 1.15;
+  }
+
+  .subtitle {
+    color: var(--ink-soft);
+    font-size: 15px;
+    margin: 0 0 32px;
+    max-width: 52ch;
+    line-height: 1.5;
+  }
+
+  .stats {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-value {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 26px;
+    font-weight: 500;
+  }
+
+  .stat-label {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  .chart-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px 20px 16px;
+  }
+
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 380px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 24px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .swatch {
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  .swatch.warm { background: var(--warm); }
+  .swatch.cool { background: var(--cool); }
+
+  footer {
+    margin-top: 22px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>AAPL, before the bell</h1>
+  <p class="subtitle">Hyperliquid's tokenized AAPL perpetual trades around the clock. This compares its last premarket price to where the real market actually opened, one trading day at a time.</p>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="chart-panel">
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="swatch warm"></span> Hyperliquid premarket mid</div>
+      <div class="legend-item"><span class="swatch cool"></span> Market open</div>
+    </div>
+  </div>
+
+  <footer>Aug 10 – Sep 11, 2026 · 24 trading days · 15-min candle mid, 13:15 UTC, vs. NYSE opening print.</footer>
+
+</div>
+
+<script>
+const rows = [
+  {date:"2026-08-10", pre:308.25, open:306.83, gap:-0.46},
+  {date:"2026-08-11", pre:304.56, open:307.75, gap:1.05},
+  {date:"2026-08-12", pre:303.98, open:305.10, gap:0.37},
+  {date:"2026-08-13", pre:305.63, open:304.21, gap:-0.46},
+  {date:"2026-08-14", pre:306.42, open:306.00, gap:-0.14},
+  {date:"2026-08-17", pre:307.03, open:306.21, gap:-0.27},
+  {date:"2026-08-18", pre:310.61, open:307.58, gap:-0.98},
+  {date:"2026-08-19", pre:316.69, open:310.14, gap:-2.07},
+  {date:"2026-08-20", pre:311.56, open:317.46, gap:1.89},
+  {date:"2026-08-21", pre:311.51, open:312.05, gap:0.17},
+  {date:"2026-08-24", pre:310.60, open:311.47, gap:0.28},
+  {date:"2026-08-25", pre:309.67, open:310.79, gap:0.36},
+  {date:"2026-08-26", pre:310.28, open:310.30, gap:0.01},
+  {date:"2026-08-27", pre:316.42, open:310.55, gap:-1.86},
+  {date:"2026-08-28", pre:319.95, open:316.85, gap:-0.97},
+  {date:"2026-08-31", pre:316.54, open:319.60, gap:0.97},
+  {date:"2026-09-01", pre:326.66, open:316.98, gap:-2.96},
+  {date:"2026-09-02", pre:324.38, open:326.87, gap:0.77},
+  {date:"2026-09-03", pre:327.77, open:324.87, gap:-0.88},
+  {date:"2026-09-04", pre:319.82, open:328.31, gap:2.65},
+  {date:"2026-09-08", pre:317.36, open:317.10, gap:-0.08},
+  {date:"2026-09-09", pre:315.21, open:315.49, gap:0.09},
+  {date:"2026-09-10", pre:316.78, open:316.67, gap:-0.03},
+  {date:"2026-09-11", pre:326.84, open:327.45, gap:0.19},
+];
+
+function fmtDate(d) {
+  const [y, m, day] = d.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[parseInt(m,10)-1] + ' ' + parseInt(day,10);
+}
+
+// Stats
+const gaps = rows.map(r => r.gap);
+const avgGap = gaps.reduce((a,b)=>a+b,0) / gaps.length;
+const avgAbs = gaps.reduce((a,b)=>a+Math.abs(b),0) / gaps.length;
+const upDays = gaps.filter(g => g > 0).length;
+
+document.getElementById('stats').innerHTML = `
+  <div class="stat">
+    <div class="stat-value">${avgGap >= 0 ? '+' : ''}${avgGap.toFixed(2)}%</div>
+    <div class="stat-label">avg. signed gap</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">${avgAbs.toFixed(2)}%</div>
+    <div class="stat-label">avg. absolute gap</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">${upDays} / ${gaps.length}</div>
+    <div class="stat-label">days open &gt; premarket</div>
+  </div>
+`;
+
+const style = getComputedStyle(document.documentElement);
+const warm = style.getPropertyValue('--warm').trim();
+const cool = style.getPropertyValue('--cool').trim();
+const warmSoft = style.getPropertyValue('--warm-soft').trim();
+const coolSoft = style.getPropertyValue('--cool-soft').trim();
+const ink = style.getPropertyValue('--ink').trim();
+const inkSoft = style.getPropertyValue('--ink-soft').trim();
+const gridLine = style.getPropertyValue('--line').trim();
+const panel = style.getPropertyValue('--panel').trim();
+
+const ctx = document.getElementById('chart').getContext('2d');
+
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: rows.map(r => fmtDate(r.date)),
+    datasets: [
+      {
+        label: 'Premarket mid',
+        data: rows.map(r => r.pre),
+        borderColor: warm,
+        backgroundColor: warmSoft,
+        pointBackgroundColor: warm,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+        tension: 0.25,
+      },
+      {
+        label: 'Market open',
+        data: rows.map(r => r.open),
+        borderColor: cool,
+        backgroundColor: coolSoft,
+        pointBackgroundColor: cool,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+        tension: 0.25,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: panel,
+        borderColor: gridLine,
+        borderWidth: 1,
+        titleColor: ink,
+        bodyColor: ink,
+        padding: 12,
+        titleFont: { family: 'IBM Plex Sans', size: 13, weight: '600' },
+        bodyFont: { family: 'IBM Plex Sans', size: 12.5 },
+        callbacks: {
+          title: (items) => items[0].label,
+          label: () => null,
+          afterBody: (items) => {
+            const idx = items[0].dataIndex;
+            const r = rows[idx];
+            const sign = r.gap >= 0 ? '+' : '';
+            return [
+              `Gap: ${sign}${r.gap.toFixed(2)}%`,
+              `Premarket: $${r.pre.toFixed(2)}`,
+              `Open: $${r.open.toFixed(2)}`,
+            ];
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: inkSoft, font: { family: 'IBM Plex Sans', size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }
+      },
+      y: {
+        grid: { color: gridLine },
+        ticks: {
+          color: inkSoft,
+          font: { family: 'IBM Plex Sans', size: 11 },
+          callback: (v) => '$' + v
+        }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
